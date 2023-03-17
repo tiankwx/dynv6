@@ -10,8 +10,8 @@ device=$3
 types=$4
 
 if [ -z "$hostname" -o -z "$token" ]; then
-    echo "Usage: ./$0 domain token [device] ipv4/ipv6/ip"
-    echo "用法：./$0 域名 token [网卡名] 更新类型"
+    echo "Usage: ./$0 domain token [device] [ipv4/ipv6/ip]"
+    echo "用法：./$0 域名 token [网卡名] [更新类型]"
     exit 1
 fi
 
@@ -23,7 +23,7 @@ fi
 
 # -n 字符串	字符串的长度不为零则为真
 if [ -n "$device" ]; then
-    device="dev $device"
+    device=""
 fi
 
 logfile="/var/log/dynv6"
@@ -50,7 +50,7 @@ get_ipv4() {
         echo "没有找到IPv4地址"
         return 1
     fi
-    echo $address4 >$file4
+    # echo $address4 >$file4
 }
 
 get_ipv6() {
@@ -60,14 +60,14 @@ get_ipv6() {
         echo "没有找到IPv6地址"
         return 1
     fi
-    echo $address6 >$file6
+    # echo $address6 >$file6
 }
 
 update_ipv6_address() {
     get_ipv6
 
     [ -e $file6 ] && old=$(cat $file6)
-    if [[ -n $old]]; then
+    if [ -n "$old" ]; then
         echo -e "本地ipv6缓存地址"
         echo -e $old
     fi
@@ -78,33 +78,36 @@ update_ipv6_address() {
     echo -e $remote
 
     if [ "$old" = "$address6" ] && [ "$remote" = "$address6" ]; then
-        echo -e $(date +"%Y-%m-%d %H:%M:%S") >>$logfile/$1.IPv6.log
-        echo -e "IPv6 address unchanged" | tee -a $logfile/$1.IPv6.log
-        echo -e "IPv6 没有改变\n" | tee -a $logfile/$1.IPv6.log
+        logpath=$logfile/$hostname.ipv6.log
+        echo -e $(date +"%Y-%m-%d %H:%M:%S") >>$logpath
+        echo -e "IPv6 address unchanged" | tee -a $logpath
+        echo -e "IPv6 没有改变\n" | tee -a $logpath
         return 1
+    else
+        # 域名 类型 地址 token 日志路径 保存路径
+        update $hostname ipv6 $address6 $token $logfile $file6
     fi
-
-    # 域名 类型 地址 token 日志路径 保存路径
-    update $hostname ipv6 $address6 $token $logfile $file6
 }
 
 update_ipv4_address() {
     get_ipv4
 
     [ -e $file4 ] && old4=$(cat $file4)
-    if [[ -n $old4]]; then
+    if [ -n "$old4" ]; then
         echo -e "本地ipv4缓存地址"
         echo -e $old4
     fi
 
     if [ "$old4" = "$address4" ]; then
-        echo -e $(date +"%Y-%m-%d %H:%M:%S") >>$logfile/$1.IPv4.log
-        echo -e "IPv4 address unchanged" | tee -a $logfile/$1.IPv4.log
-        echo -e "IPv4 没有改变\n" | tee -a $logfile/$1.IPv4.log
+        logpath=$logfile/$hostname.ipv4.log
+        echo -e $(date +"%Y-%m-%d %H:%M:%S") >>$logpath
+        echo -e "IPv4 address unchanged" | tee -a $logpath
+        echo -e "IPv4 没有改变\n" | tee -a $logpath
         return 1
+    else
+        # 域名 类型 地址 token 日志路径 保存路径
+        update $hostname ipv4 $address4 $token $logfile $file4
     fi
-    # 域名 类型 地址 token 日志路径 保存路径
-    update $hostname ipv4 $address4 $token $logfile $file4
 }
 
 update() {
@@ -122,9 +125,9 @@ update() {
     echo $3 >$6
 }
 
-if [ $types == "ipv4" ]; then
+if [ $types = "ipv4" ]; then
     update_ipv4_address
-elif [ $types == "ipv6" ]; then
+elif [ $types = "ipv6" ]; then
     update_ipv6_address
 else
     update_ipv4_address
